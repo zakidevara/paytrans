@@ -24,6 +24,15 @@ repositories {
 	mavenCentral()
 }
 
+ext {
+	// The core OpenTelemetry version (API, SDK)
+	otelVersion = '1.34.1'
+
+	// The Spring Boot Auto-instrumentation version (The "Starter")
+	// Note: Alpha versions are common here as the standard evolves quickly
+	otelInstrumentationVersion = '2.0.0-alpha'
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-data-r2dbc'
@@ -38,6 +47,16 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webflux-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// Otel Distributed Tracing
+	implementation platform("io.opentelemetry:opentelemetry-bom:${otelVersion}")
+	implementation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${otelInstrumentationVersion}")
+	implementation 'io.opentelemetry:opentelemetry-api'
+	implementation "io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:${otelInstrumentationVersion}"
+
+	// Resilience4j (Rate Limiter)
+	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
+	implementation 'io.github.resilience4j:resilience4j-reactor:2.2.0'
 }
 
 tasks.named('test') {

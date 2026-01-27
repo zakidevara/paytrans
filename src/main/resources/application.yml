@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: paytrans-service # Renamed
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/paytrans # Renamed DB
+    username: user
+    password: password
+  sql:
+    init:
+      mode: always
+
+otel:
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317
+  logs:
+    exporter: otlp
+  metrics:
+    exporter: otlp
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{trace_id},%X{span_id}]"
+
+    resilience4j:
+      ratelimiter:
+        instances:
+          ingestionLimiter: # Name of our limiter
+            limitForPeriod: 10          # Allow 10 requests
+            limitRefreshPeriod: 1s      # Per 1 second
+            timeoutDuration: 0ms        # Fail immediately (don't wait/queue)
