@@ -41,3 +41,10 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # Redis for Idempotency
+  redis:
+    image: redis:7-alpine
+    container_name: paytrans-redis
+    ports:
+      - "6379:6379"

@@ -65,7 +65,12 @@ dependencies {
 	// Reactive Kafka (since we use WebFlux)
 	implementation 'io.projectreactor.kafka:reactor-kafka:1.3.23'
 
-  implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
+	implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
+
+	// Redis for Idempotency
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+	// Jackson Java 8 Date/Time support
+	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.16.1'
 
 }
 
