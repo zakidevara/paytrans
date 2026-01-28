@@ -52,11 +52,18 @@ dependencies {
 	implementation platform("io.opentelemetry:opentelemetry-bom:${otelVersion}")
 	implementation platform("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom-alpha:${otelInstrumentationVersion}")
 	implementation 'io.opentelemetry:opentelemetry-api'
-	implementation "io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter:${otelInstrumentationVersion}"
+	implementation "io.opentelemetry:opentelemetry-sdk"
+	implementation "io.opentelemetry:opentelemetry-exporter-otlp"
+	implementation "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure"
 
 	// Resilience4j (Rate Limiter)
 	implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.2.0'
 	implementation 'io.github.resilience4j:resilience4j-reactor:2.2.0'
+
+	// Kafka Support
+	implementation 'org.springframework.kafka:spring-kafka'
+	// Reactive Kafka (since we use WebFlux)
+	implementation 'io.projectreactor.kafka:reactor-kafka:1.3.23'
 }
 
 tasks.named('test') {
