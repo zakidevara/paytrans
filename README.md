@@ -4,13 +4,15 @@
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.2-green?style=for-the-badge&logo=springboot)
 ![Gradle](https://img.shields.io/badge/Gradle-8.5-02303A?style=for-the-badge&logo=gradle)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue?style=for-the-badge&logo=postgresql)
+![Redis](https://img.shields.io/badge/Redis-7-red?style=for-the-badge&logo=redis)
 
-A reactive, non-blocking payment processing microservice designed for high-throughput system, demonstrating a modern **Event-Driven** and **Observable** architecture.
+A reactive, non-blocking payment processing microservice designed for high-throughput systems, demonstrating modern **Event-Driven**, **Observable**, and **ACID-Compliant** architecture.
 
 ## Key Features
 
 * **Reactive Core (WebFlux + R2DBC):** Uses a non-blocking event loop to handle thousands of concurrent connections with minimal resource usage.
 * **Redis-Based Idempotency:** Prevents duplicate payment processing using distributed idempotency keys with 24-hour caching and processing locks.
+* **ACID Transaction Guarantees:** Full demonstration of Atomicity, Consistency, Isolation, and Durability principles with optimistic locking and audit trails.
 * **Resilience (Rate Limiting):** Implements **Resilience4j** to reject excess traffic immediately (fail-fast), protecting the database from being overwhelmed during spikes.
 * **Observability First (OpenTelemetry):** Distributed tracing is baked in. Custom spans track business logic latency, visualized via **Jaeger**.
 * **Event-Driven Architecture:** Publishes transaction events to Kafka for downstream processing and auditing.
@@ -46,8 +48,14 @@ src/main/java/com/devara/paytrans
 │       ├── TransactionController.java   # Rate Limiter & Idempotency
 │       ├── TransactionService.java      # Business Logic & Tracing
 │       ├── IdempotencyService.java      # Redis-based Idempotency
+│       ├── AcidTransactionService.java  # ACID Principles Demo
+│       ├── AcidDemoController.java      # ACID REST Endpoints
 │       ├── TransactionRepository.java   # R2DBC Interface
-│       ├── Transaction.java             # Domain Entity
+│       ├── AccountRepository.java       # Account R2DBC Interface
+│       ├── TransactionLedgerRepository.java  # Audit Trail Repository
+│       ├── Transaction.java             # Domain Entity (@Version)
+│       ├── Account.java                 # Account Entity (Transfers)
+│       ├── TransactionLedger.java       # Audit Trail Entity
 │       ├── TransactionEvent.java        # Kafka Event
 │       └── TransactionListener.java     # Kafka Consumer
 └── PayTransApplication.java
@@ -109,14 +117,65 @@ Expected Result:
 
 ## Idempotency Deep Dive
 
-This service implements Redis-based idempotency to prevent duplicate payment processing. See [IDEMPOTENCY.md](IDEMPOTENCY.md) for detailed documentation.
+This service implements Redis-based idempotency to prevent duplicate payment processing. See [docs/IDEMPOTENCY.md](docs/IDEMPOTENCY.md) for detailed documentation.
 
 **Quick Reference:**
 - Clients send unique `idempotencyKey` with each request
 - Duplicate requests (same key) return cached results
 - Results cached for 24 hours in Redis
 - Concurrent duplicates blocked with processing locks
-- See [TESTING.md](TESTING.md) for test examples
+
+---
+
+## ACID Principles Demonstration
+
+This service provides comprehensive ACID database transaction demonstrations. See [docs/ACID.md](docs/ACID.md) for detailed documentation.
+
+### ACID Endpoints
+
+| Principle | Endpoint | Description |
+|-----------|----------|-------------|
+| **Atomicity** | `POST /api/v1/acid/atomicity/transfer` | Atomic money transfer between accounts |
+| **Atomicity** | `POST /api/v1/acid/atomicity/multistep` | Multi-step operation with rollback |
+| **Consistency** | `POST /api/v1/acid/consistency` | Validated transaction with business rules |
+| **Isolation** | `PUT /api/v1/acid/isolation/{id}` | Optimistic locking update |
+| **Isolation** | `POST /api/v1/acid/isolation/serializable` | SERIALIZABLE isolation level |
+| **Durability** | `POST /api/v1/acid/durability` | Transaction with audit trail |
+| **Durability** | `GET /api/v1/acid/durability/audit/{id}` | Get complete audit history |
+
+### Quick ACID Test
+
+```bash
+# Atomicity - Transfer $100 between accounts
+curl -X POST http://localhost:8080/api/v1/acid/atomicity/transfer \
+  -H "Content-Type: application/json" \
+  -d '{"fromAccount": "ACC001", "toAccount": "ACC002", "amount": 100.00}'
+
+# Consistency - Validated transaction with fee calculation
+curl -X POST http://localhost:8080/api/v1/acid/consistency \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 100.00, "currency": "USD"}'
+
+# Isolation - Update with optimistic locking
+curl -X PUT http://localhost:8080/api/v1/acid/isolation/1 \
+  -H "Content-Type: application/json" \
+  -d '{"newStatus": "REFUNDED"}'
+
+# Durability - Get audit trail
+curl http://localhost:8080/api/v1/acid/durability/audit/1
+```
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/IDEMPOTENCY.md](docs/IDEMPOTENCY.md) | Redis-based idempotency implementation |
+| [docs/ACID.md](docs/ACID.md) | ACID principles demonstration |
+| [docs/TESTING.md](docs/TESTING.md) | Testing examples and scenarios |
+
+---
 ```
 
 ### 3. Process a Transaction (Happy Path)
