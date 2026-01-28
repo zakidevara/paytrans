@@ -1,7 +1,7 @@
 package com.devara.paytrans.payment.transaction;
 
-import io.github.resilience4j.ratelimiter.RequestNotPermitted;
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.github.resilience4j.reactor.ratelimiter.operator.RateLimiterOperator;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 public class TransactionController {
 
   private final TransactionService service;
+  private final RateLimiterRegistry rateLimiterRegistry;
 
   /**
    * Creates a new transaction.
@@ -29,22 +30,19 @@ public class TransactionController {
    */
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  @RateLimiter(name = "ingestionLimiter", fallbackMethod = "fallback")
   public Mono<Transaction> createTransaction(@Valid @RequestBody TransactionRequest request) {
     log.info("Received transaction request for amount: {}", request.getAmount());
-    return service.processPayment(request.getAmount(), request.getCurrency());
-  }
 
-  /**
-   * Fallback method called when the Rate Limiter blocks a request.
-   * MUST have the same signature as the original method + the Exception parameter.
-   */
-  public Mono<Transaction> fallback(TransactionRequest request, RequestNotPermitted ex) {
-    log.warn("Rate limit exceeded for currency: {}", request.getCurrency());
-    return Mono.error(new ResponseStatusException(
-        HttpStatus.TOO_MANY_REQUESTS,
-        "System is currently busy. Please try again later."
-    ));
+    // Apply reactive rate limiter using transformDeferred
+    return service.processPayment(request.getAmount(), request.getCurrency())
+        .transformDeferred(RateLimiterOperator.of(rateLimiterRegistry.rateLimiter("ingestionLimiter")))
+        .onErrorResume(io.github.resilience4j.ratelimiter.RequestNotPermitted.class, ex -> {
+          log.warn("Rate limit exceeded for currency: {}", request.getCurrency());
+          return Mono.error(new ResponseStatusException(
+              HttpStatus.TOO_MANY_REQUESTS,
+              "System is currently busy. Please try again later."
+          ));
+        });
   }
 
   /**
@@ -52,7 +50,7 @@ public class TransactionController {
    * Validates input before it reaches the service logic.
    */
   @Data
-  static class TransactionRequest {
+  public static class TransactionRequest {
     @NotNull(message = "Amount is required")
     @DecimalMin(value = "0.01", message = "Amount must be positive")
     private BigDecimal amount;
