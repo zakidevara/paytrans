@@ -13,6 +13,7 @@ otel:
   exporter:
     otlp:
       endpoint: http://localhost:4317
+      protocol: grpc
   logs:
     exporter: otlp
   metrics:
