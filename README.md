@@ -92,7 +92,18 @@ curl -i -X POST http://localhost:8080/api/v1/transactions \
 ```
 
 ### 2. Test Idempotency (Duplicate Request)
-Send3. View the Trace (Observability)
+Send the same request to demonstrate that the duplicate request will not be processed twice.
+```bash
+curl -i -X POST http://localhost:8080/api/v1/transactions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idempotencyKey": "unique-key-12345",
+    "amount": 5.50,
+    "currency": "SGD"
+  }'
+```
+
+### 3. View the Trace (Observability)
 - Go to Jaeger: http://localhost:16686
 - Select Service: paytrans-service
 - Click Find Traces.
@@ -176,28 +187,3 @@ curl http://localhost:8080/api/v1/acid/durability/audit/1
 | [docs/TESTING.md](docs/TESTING.md) | Testing examples and scenarios |
 
 ---
-```
-
-### 3. Process a Transaction (Happy Path)
-Send a standard payment request:
-```bash
-curl -i -X POST http://localhost:8080/api/v1/transactions \
-  -H "Content-Type: application/json" \
-  -d '{"amount": 5.50, "currency": "SGD"}'
-```
-
-### 2. View the Trace (Observability)
-- Go to Jaeger: http://localhost:16686
-- Select Service: paytrans-service
-- Click Find Traces.
-- We can see the full waterfall: HTTP POST → calculate_fees (Custom Span) → INSERT transactions.
-
-### 3. Stress Test (Rate Limiting)
-The system is configured to allow 10 requests per second. To simulate a traffic spike, run this loop in your terminal:
-
-```bash
-for i in {1..20}; do curl -o /dev/null -s -w "%{http_code}\n" -X POST http://localhost:8080/api/v1/transactions -H "Content-Type: application/json" -d '{"amount": 10, "currency": "USD"}'; done
-```
-Expected Result:
-- First 10 requests: 201 (Success)
-- Remaining requests: 429 (Too Many Requests) - The system successfully shed the load.
